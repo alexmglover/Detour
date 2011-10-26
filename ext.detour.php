@@ -4,11 +4,12 @@ class Detour_ext {
 
 	var $settings        = array();
 	var $name            = 'Detour';
-	var $version         = '0.6';
+	var $version         = '0.7';
 	var $description     = 'Reroute urls to another URL.';
 	var $settings_exist  = 'y';
 	var $docs_url        = 'http://www.cityzen.com/addons/detour';
 	var $urlName		 = 'detour';
+	var $site_id 		 = '';
 	
 	function Detour_ext($settings = FALSE)
 	{
@@ -22,7 +23,8 @@ class Detour_ext {
 
 		$this->settings = $settings;
 		$this->EE =& get_instance();
-	
+		
+		$this->site_id = $this->EE->config->item('site_id');
 	}
 	
 	
@@ -31,11 +33,14 @@ class Detour_ext {
 		// $url = $this->EE->uri->uri_string;
 		$url = trim($_SERVER['REQUEST_URI'], '/');
 		
-		$sql = "SELECT new_url, detour_method
-		FROM exp_detours 
-		WHERE original_url = '" . $this->EE->db->escape_str($url) . "' LIMIT 1";
 
-		$query = $this->EE->db->query($sql);
+		$query = $this->EE->db
+			->select('new_url, detour_method')
+			->from('detours')
+			->where('original_url', $this->EE->uri->uri_string)
+			->where('site_id', $this->site_id)
+			->limit(1)
+			->get();
 
 		if($query->num_rows() > 0)
 		{
@@ -67,9 +72,12 @@ class Detour_ext {
 		
 		$vars['currentDetours'] = array();
 		
-		$currentDetoursSQL = $this->EE->db->query("SELECT detour_id, original_url, new_url, detour_method
-			FROM exp_detours 
-			ORDER BY detour_id");
+		$currentDetoursSQL = $this->EE->db
+			->select('detour_id, original_url, new_url, detour_method')
+			->from('detours')
+			->where('site_id', $this->site_id)
+			->order_by('detour_id')
+			->get();
 		
 		foreach($currentDetoursSQL->result_array() as $value)
 		{
@@ -171,6 +179,34 @@ class Detour_ext {
 		$this->EE->dbforge->drop_table('detours');
 		
 	}	
+
+	function update_extension($current = '') 
+	{
+
+	    if ($current == '' || $current == $this->version)
+	    {
+	        return FALSE;
+	    }
+	    
+		if(version_compare($current, '0.7', "<=")) 
+		{
+			
+			$this->EE->load->dbforge();
+			
+			$fields = array(
+				'site_id' => array(
+					'type' 			=> 'INT',
+					'constraint' 	=> '10',
+					'default'		=> '1'
+				)
+			);
+
+			if(!$this->EE->db->field_exists('site_id', 'detours')) {
+				$this->EE->dbforge->add_column('detours', $fields);		
+			}
+			
+		}
+	}
 	
 }
 //END CLASS
