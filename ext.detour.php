@@ -108,7 +108,8 @@ class Detour_ext {
 			$data = array(
 				'original_url' => xss_clean($original_url),
 				'new_url' => $_POST['new_url'], 
-				'detour_method' => $_POST['new_detour_method']
+				'detour_method' => $_POST['new_detour_method'],
+				'site_id' => $this->site_id
 			);
 	
 			$this->EE->db->insert('exp_detours', $data);
